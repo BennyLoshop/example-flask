@@ -46,15 +46,12 @@ def modify_request_body(original_data, content_type):
         'application/x-www-form-urlencoded',
         'text/html'
     ]
-    
     if not any(content_type.startswith(t) for t in processable_types):
         return original_data, False
-    
     try:
         charset = 'utf-8'
         if 'charset=' in content_type:
             charset = content_type.split('charset=')[1].split(';')[0].strip().lower()
-        
         decoded = original_data.decode(charset)
         modified = decoded.replace('deviceNumber', 'dn')
         return modified.encode(charset), True
@@ -67,42 +64,47 @@ def before_request():
     raw_data = request.get_data(cache=False)
     content_type = request.headers.get('Content-Type', '')
     modified_data, is_modified = modify_request_body(raw_data, content_type)
-    
     request.modified_data = modified_data
     request.is_modified = is_modified
     request._cached_data = modified_data
 
 def log_request(response):
     """统一请求日志记录"""
-    duration = (time.time() - request.start_time) * 1000
+    duration = (time.time() - request.start_time) * 1000 if hasattr(request, 'start_time') else 0
     status = "已拦截" if getattr(response, 'is_blocked', False) else "已代理"
-    
     log_msg = [
         f"\n{'='*40} 请求日志 {'='*40}",
         f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] {request.method} {request.path}",
         f"状态: {status} | 耗时: {duration:.2f}ms | 状态码: {response.status_code}"
     ]
-    
     if status == "已拦截":
         log_msg.append("拦截原因: " + getattr(response, 'block_reason', '未指明原因'))
-    
     print('\n'.join(log_msg))
 
-@app.route('/', defaults={'path': ''}, methods=['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD', 'OPTIONS'])
-@app.route('/<path:path>', methods=['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD', 'OPTIONS'])
-def proxy_request(path):
+@app.route('/', methods=['GET'])
+def home():
+    # 首页
+    return "<h1>欢迎访问主页</h1>"
+
+@app.route('/api/<path:path>', methods=['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD', 'OPTIONS'])
+def proxy_api(path):
     request.start_time = time.time()
-    
-    # 最高优先级：发现接口
-    if request.path == '/api/discovery/sxz' and request.method == 'GET':
-        response = jsonify(DISCOVERY_RESPONSE)
+
+    full_api_path = '/api/' + path
+
+    # 发现接口优先级（/api/discovery/sxz）
+    if full_api_path == '/api/discovery/sxz' and request.method == 'GET':
+        base_url = request.host_url.rstrip('/')
+        resp = dict(DISCOVERY_RESPONSE)
+        resp['server'] = f"{base_url}/api"
+        response = jsonify(resp)
         response.is_blocked = True
         response.block_reason = "发现接口拦截"
         log_request(response)
         return response
 
-    # 第二优先级：WebWhiteList路径范围
-    if request.path.startswith(BLOCK_PATH_PREFIX):
+    # WebWhiteList路径范围
+    if full_api_path.startswith(BLOCK_PATH_PREFIX):
         response = jsonify(BLOCKED_RESPONSE)
         response.status_code = 403
         response.is_blocked = True
@@ -110,8 +112,8 @@ def proxy_request(path):
         log_request(response)
         return response
 
-    # 第三优先级：特殊预定义路径
-    if request.path == SPECIAL_PATH:
+    # 特殊预定义路径
+    if full_api_path == SPECIAL_PATH:
         response = jsonify(PRESET_RESPONSE)
         response.headers['Content-Type'] = 'application/json'
         response.is_blocked = True
@@ -122,7 +124,7 @@ def proxy_request(path):
     # 正常代理逻辑
     headers = {k: v for k, v in request.headers if k.lower() != 'host'}
     headers['Host'] = TARGET_DOMAIN
-    
+
     if 'Content-Length' in headers and request.is_modified:
         headers['Content-Length'] = str(len(request.modified_data))
 
@@ -151,9 +153,16 @@ def proxy_request(path):
         k: v for k, v in resp.headers.items()
         if k.lower() not in ['content-encoding', 'transfer-encoding']
     })
-    
     log_request(response)
     return response
+
+@app.route('/discovery/sxz', methods=['GET'])
+def discovery_sxz():
+    # 旧路径 discovery/sxz，返回 server 字段为当前服务/api
+    base_url = request.host_url.rstrip('/')
+    resp = dict(DISCOVERY_RESPONSE)
+    resp['server'] = f"{base_url}/api"
+    return jsonify(resp)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8000)
