@@ -79,7 +79,72 @@ def log_request(response):
 
 @app.route('/', methods=['GET'])
 def home():
-    return "<h1>欢迎访问主页</h1>"
+    return '''
+    <!DOCTYPE html>
+    <html lang="zh-cn">
+    <head>
+        <meta charset="utf-8">
+        <title>欢迎访问主页</title>
+        <!-- Materialize CSS -->
+        <link href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css" rel="stylesheet">
+        <!-- Material Icons -->
+        <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+        <style>
+            body {
+                display: flex;
+                min-height: 100vh;
+                flex-direction: column;
+                background: #f5f5f5;
+            }
+            main {
+                flex: 1 0 auto;
+            }
+            .fade-in {
+                animation: fadeIn 1.2s;
+            }
+            @keyframes fadeIn {
+                0% { opacity: 0; transform: translateY(30px);}
+                100% { opacity: 1; transform: translateY(0);}
+            }
+        </style>
+    </head>
+    <body>
+        <nav class="blue">
+            <div class="nav-wrapper container">
+                <a href="/" class="brand-logo"><i class="material-icons">cloud</i>Flask Proxy Demo</a>
+            </div>
+        </nav>
+        <main>
+            <div class="container fade-in" style="margin-top: 50px;">
+                <div class="card">
+                    <div class="card-content">
+                        <span class="card-title">功能简介</span>
+                        <p>
+                            本项目是一个基于 Flask 的反向代理和接口拦截服务。
+                            <ul>
+                                <li>支持 API 请求转发与日志记录</li>
+                                <li>可自定义拦截和响应策略</li>
+                                <li>内置演示接口，方便测试</li>
+                            </ul>
+                        </p>
+                    </div>
+                    <div class="card-action">
+                        <a href="https://github.com/BennyLoshop/example-flask" target="_blank" class="btn blue lighten-1 waves-effect waves-light">
+                            <i class="material-icons left">star</i> GitHub 项目主页
+                        </a>
+                    </div>
+                </div>
+                <div class="center-align" style="margin-top:24px;">
+                    <i class="material-icons large blue-text text-lighten-2" style="animation: fadeIn 2s;">gesture</i>
+                    <h6 style="color: #607d8b; margin-top: 10px;">欢迎体验 Material Design 动效主页！</h6>
+                </div>
+            </div>
+        </main>
+        <!-- Materialize JS -->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+    </body>
+    </html>
+    '''
 
 @app.route('/api/<path:path>', methods=['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD', 'OPTIONS'])
 def proxy_api(path):
