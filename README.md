@@ -1,67 +1,60 @@
-[![example-flask](https://github.com/koyeb/example-flask/actions/workflows/deploy.yaml/badge.svg)](https://github.com/koyeb/example-flask/actions)
+# 中育API代理
 
-<div align="center">
-  <a href="https://koyeb.com">
-    <img src="https://www.koyeb.com/static/images/icons/koyeb.svg" alt="Logo" width="80" height="80">
-  </a>
-  <h3 align="center">Koyeb Serverless Platform</h3>
-  <p align="center">
-    Deploy a Flask application on Koyeb
-    <br />
-    <a href="https://koyeb.com">Learn more about Koyeb</a>
-    ·
-    <a href="https://koyeb.com/docs">Explore the documentation</a>
-    ·
-    <a href="https://koyeb.com/tutorials">Discover our tutorials</a>
-  </p>
-</div>
+## 项目概述
 
+本项目是一个基于Flask框架的API代理服务，旨在拦截和修改特定API请求，同时提供预设的响应结果。主要功能包括：
 
-## About Koyeb and the Flask example application
+- **请求拦截与修改**：对特定路径的请求进行拦截，修改请求体中的关键字。
+- **预设响应**：针对特定接口返回预设的响应结果，不转发请求到目标服务器。
+- **日志记录**：记录请求的详细信息，包括请求时间、方法、路径、状态码和耗时。
 
-Koyeb is a developer-friendly serverless platform to deploy apps globally. No-ops, servers, or infrastructure management.
-This repository contains a Flask application you can deploy on the Koyeb serverless platform for testing.
+## 依赖
 
-This example application is designed to show how a Flask application can be deployed on Koyeb.
+- Flask
+- requests
 
-## Getting Started
+## 配置
 
-Follow the steps below to deploy and run the Flask application on your Koyeb account.
+- **目标域名**：`TARGET_DOMAIN = 'sxz.api.zykj.org'`
+- **特殊路径**：`SPECIAL_PATH = '/api/services/app/CtrlStrategy/GetControlPolicyByDeviceNumberAsync'`
+- **拦截路径前缀**：`BLOCK_PATH_PREFIX = '/api/services/app/[WebWhiteList]/'`
 
-### Requirements
+## 运行
 
-You need a Koyeb account to successfully deploy and run this application. If you don't already have an account, you can sign-up for free [here](https://app.koyeb.com/auth/signup).
+```bash
+pip install -r requirements.txt
+python app.py
+```
 
-### Deploy using the Koyeb button
+## 主要功能说明
 
-The fastest way to deploy the Flask application is to click the **Deploy to Koyeb** button below.
+1. **请求体修改**
+   - 修改请求体中的`deviceNumber`为`dn`。
+   - 支持多种Content-Type，包括`application/json`、`text/plain`等。
 
-[![Deploy to Koyeb](https://www.koyeb.com/static/images/deploy/button.svg)](https://app.koyeb.com/deploy?type=git&repository=github.com/koyeb/example-flask&branch=main&name=flask-on-koyeb)
+2. **预设响应**
+   - **发现接口拦截**：当请求路径为`/api/discovery/sxz`时，返回预设的发现接口响应结果。
+   - **受保护接口拦截**：当请求路径以`/api/services/app/[WebWhiteList]/`开头时，返回403错误响应。
+   - **特殊预定义路径拦截**：当请求路径为`SPECIAL_PATH`时，返回预设的响应结果。
 
-Clicking on this button brings you to the Koyeb App creation page with everything pre-set to launch this application.
+3. **日志记录**
+   - 记录请求的时间、方法、路径、状态码、耗时和拦截原因（如果有）。
 
-_To modify this application example, you will need to fork this repository. Checkout the [fork and deploy](#fork-and-deploy-to-koyeb) instructions._
+## 示例请求
 
-### Fork and deploy to Koyeb
+- **发现接口拦截**
+  - 请求：`GET /api/discovery/sxz`
+  - 响应：`DISCOVERY_RESPONSE`
 
-If you want to customize and enhance this application, you need to fork this repository.
+- **受保护接口拦截**
+  - 请求：`GET /api/services/app/[WebWhiteList]/any_path`
+  - 响应：`BLOCKED_RESPONSE`
 
-If you used the **Deploy to Koyeb** button, you can simply link your service to your forked repository to be able to push changes.
-Alternatively, you can manually create the application as described below.
+- **特殊预定义路径拦截**
+  - 请求：`GET /api/services/app/CtrlStrategy/GetControlPolicyByDeviceNumberAsync`
+  - 响应：`PRESET_RESPONSE`
 
-On the [Koyeb Control Panel](https://app.koyeb.com/), on the **Overview** tab, click the **Create Web Service** button to begin.
+## 注意事项
 
-1. Select **GitHub** as the deployment method.
-2. In the repositories list, select the repository you just forked.
-3. In the **Builder** section, click the **override** toggle associated with the **Run command** and enter `gunicorn app:app` in the field.
-4. Choose a name for your App and Service, i.e `flask-on-koyeb`, and click **Deploy**.
-
-You land on the deployment page where you can follow the build of your Flask application. Once the build is completed, your application is being deployed and you will be able to access it via `<YOUR_APP_NAME>-<YOUR_ORG_NAME>.koyeb.app`.
-
-## Contributing
-
-If you have any questions, ideas or suggestions regarding this application sample, feel free to open an [issue](//github.com//koyeb/example-flask/issues) or fork this repository and open a [pull request](//github.com/koyeb/example-flask/pulls).
-
-## Contact
-
-[Koyeb](https://www.koyeb.com) - [@gokoyeb](https://twitter.com/gokoyeb) - [Slack](http://slack.koyeb.com/)
+- 确保目标域名`TARGET_DOMAIN`配置正确，否则代理请求将无法正常转发。
+- 修改请求体和预设响应的逻辑可根据实际需求进行调整。
