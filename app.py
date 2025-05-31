@@ -1,4 +1,3 @@
-# {"name": "中育api代理", "version": "2.1.0", "dependencies": ["flask", "requests"]}
 from flask import Flask, request, Response, jsonify
 import requests
 import time
@@ -7,9 +6,8 @@ app = Flask(__name__)
 TARGET_DOMAIN = 'sxz.api.zykj.org'
 TARGET_URL = f'http://{TARGET_DOMAIN}'
 
-# 特殊路径配置
-SPECIAL_PATH = '/api/services/app/CtrlStrategy/GetControlPolicyByDeviceNumberAsync'
-BLOCK_PATH_PREFIX = '/api/services/app/[WebWhiteList]/'
+SPECIAL_PATH = '/services/app/CtrlStrategy/GetControlPolicyByDeviceNumberAsync'
+BLOCK_PATH_PREFIX = '/services/app/[WebWhiteList]/'
 
 PRESET_RESPONSE = {
     "result": {"type": 4, "policies": []},
@@ -37,7 +35,6 @@ DISCOVERY_RESPONSE = {
 }
 
 def modify_request_body(original_data, content_type):
-    """修改请求体内容"""
     processable_types = [
         'application/json',
         'text/plain',
@@ -69,7 +66,6 @@ def before_request():
     request._cached_data = modified_data
 
 def log_request(response):
-    """统一请求日志记录"""
     duration = (time.time() - request.start_time) * 1000 if hasattr(request, 'start_time') else 0
     status = "已拦截" if getattr(response, 'is_blocked', False) else "已代理"
     log_msg = [
@@ -83,17 +79,14 @@ def log_request(response):
 
 @app.route('/', methods=['GET'])
 def home():
-    # 首页
     return "<h1>欢迎访问主页</h1>"
 
 @app.route('/api/<path:path>', methods=['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD', 'OPTIONS'])
 def proxy_api(path):
     request.start_time = time.time()
 
-    full_api_path = '/api/' + path
-
-    # 发现接口优先级（/api/discovery/sxz）
-    if full_api_path == '/api/discovery/sxz' and request.method == 'GET':
+    # /api/discovery/sxz 优先处理
+    if path == 'discovery/sxz' and request.method == 'GET':
         base_url = request.host_url.rstrip('/')
         resp = dict(DISCOVERY_RESPONSE)
         resp['server'] = f"{base_url}/api"
@@ -103,8 +96,8 @@ def proxy_api(path):
         log_request(response)
         return response
 
-    # WebWhiteList路径范围
-    if full_api_path.startswith(BLOCK_PATH_PREFIX):
+    # WebWhiteList 路径
+    if path.startswith(BLOCK_PATH_PREFIX.lstrip('/')):
         response = jsonify(BLOCKED_RESPONSE)
         response.status_code = 403
         response.is_blocked = True
@@ -113,7 +106,7 @@ def proxy_api(path):
         return response
 
     # 特殊预定义路径
-    if full_api_path == SPECIAL_PATH:
+    if path == SPECIAL_PATH.lstrip('/'):
         response = jsonify(PRESET_RESPONSE)
         response.headers['Content-Type'] = 'application/json'
         response.is_blocked = True
@@ -121,7 +114,7 @@ def proxy_api(path):
         log_request(response)
         return response
 
-    # 正常代理逻辑
+    # 代理转发，去除 /api/ 前缀
     headers = {k: v for k, v in request.headers if k.lower() != 'host'}
     headers['Host'] = TARGET_DOMAIN
 
@@ -156,9 +149,9 @@ def proxy_api(path):
     log_request(response)
     return response
 
+# 旧发现接口，路径不变，返回 server 字段为当前服务/api
 @app.route('/discovery/sxz', methods=['GET'])
 def discovery_sxz():
-    # 旧路径 discovery/sxz，返回 server 字段为当前服务/api
     base_url = request.host_url.rstrip('/')
     resp = dict(DISCOVERY_RESPONSE)
     resp['server'] = f"{base_url}/api"
